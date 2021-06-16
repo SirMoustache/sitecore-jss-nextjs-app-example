@@ -15,7 +15,7 @@ import generateComponentFactory, { ComponentFile } from './templates/component-f
   Generating the componentFactory is optional, and it can be maintained manually if preferred.
 
   The default convention uses the component's filename (without the extension) as the component
-  name. For example, the file `/components/ComponentName.ts` would map to component `ComponentName`.
+  name. For example, the file `/components-sitecore/ComponentName.ts` would map to component `ComponentName`.
   This can be customized in writeComponentFactory().
 
   This script supports two modes. In default mode, the component factory file is written once.
@@ -27,7 +27,7 @@ import generateComponentFactory, { ComponentFile } from './templates/component-f
 /* eslint-disable no-console */
 
 const componentFactoryPath = path.resolve('src/temp/componentFactory.ts');
-const componentRootPath = 'src/components';
+const componentRootPath = 'src/components-sitecore';
 
 // Matches TypeScript files that are not type definition files
 const fileFormat = new RegExp(/(.+)(?<!\.d)\.tsx?$/);
