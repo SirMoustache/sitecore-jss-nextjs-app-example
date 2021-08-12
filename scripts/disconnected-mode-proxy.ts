@@ -16,7 +16,9 @@ import { config } from '../package.json';
 
 const touchToReloadFilePath = 'src/temp/config.js';
 
-const serverOptions = {
+type Options = Parameters<typeof createDefaultDisconnectedServer>[0];
+
+const serverOptions: Options = {
   appRoot: path.join(__dirname, '..'),
   appName: config.appName,
   // Prevent require of ./sitecore/definitions/config.js, because ts-node is running
@@ -38,6 +40,38 @@ const serverOptions = {
     } else {
       console.log('Manifest data updated. Refresh the browser to see latest content!');
     }
+  },
+  customizeRendering: function (transformedRendering, rawRendering) {
+    if (rawRendering && rawRendering.dataSource && rawRendering.dataSource.expandedParams) {
+      transformedRendering.expandedParams = {
+        ...rawRendering.dataSource.expandedParams,
+      };
+    }
+
+    return transformedRendering;
+  },
+  customizeContext: function (context) {
+    const user = {
+      domain: '3shape',
+      name: 'ec122251-1546-4a1d-8094-3cfa02b1cdd1',
+    };
+
+    const forum = {
+      userId: 16687,
+    };
+
+    const userProfile = {
+      fullName: 'Test User',
+      userRoles: ['3shape\\Community', '3shape\\Community Admin'],
+      identityIdentifier: 'TestId',
+      email: 'vitalii.hopaniuk@3shape.com',
+    };
+
+    const segment = { key: 'c5CSeYUB0Qoe08MsohbroJE9jqaTLB11' };
+
+    const language = config.language;
+
+    return { ...context, user, forum, userProfile, segment, language };
   },
 };
 

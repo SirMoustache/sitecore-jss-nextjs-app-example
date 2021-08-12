@@ -8,6 +8,10 @@ export interface PathMatch {
 
 type PathPattern = string | { path: string; caseSensitive?: boolean; end?: boolean };
 
+function invariant(cond: boolean, message: string): void {
+  if (!cond) throw new Error(message);
+}
+
 function safelyDecodeURIComponent(value: string, paramName: string) {
   try {
     return decodeURIComponent(value.replace(/\+/g, ' '));
@@ -74,4 +78,13 @@ function compilePath(path: string, caseSensitive: boolean, end: boolean): [RegEx
   const matcher = new RegExp(source, flags);
 
   return [matcher, keys];
+}
+
+export function generatePath(path: string, params: Params = {}): string {
+  return path
+    .replace(/:(\w+)/g, (_, key) => {
+      invariant(params[key] != null, `Missing ":${key}" param`);
+      return params[key];
+    })
+    .replace(/\/*\*$/, (_) => (params['*'] == null ? '' : params['*'].replace(/^\/*/, '/')));
 }

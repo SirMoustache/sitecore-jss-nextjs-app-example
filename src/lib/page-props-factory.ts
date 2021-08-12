@@ -19,7 +19,7 @@ import config from 'temp/config';
  * Extract normalized Sitecore item path from query
  * @param {ParsedUrlQuery | undefined} params
  */
-const extractPath = function (params: ParsedUrlQuery | undefined): string {
+export const extractPath = function (params: ParsedUrlQuery | undefined): string {
   if (params === undefined) {
     return '/';
   }
@@ -109,7 +109,9 @@ export class SitecorePagePropsFactory {
           path,
           locale,
           // eslint-disable-next-line prettier/prettier
-          isServerSidePropsContext(context) ? (context as GetServerSidePropsContext).req : undefined,
+          isServerSidePropsContext(context)
+            ? (context as GetServerSidePropsContext).req
+            : undefined,
           isServerSidePropsContext(context) ? (context as GetServerSidePropsContext).res : undefined
         )
         .catch((error) => {

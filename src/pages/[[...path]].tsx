@@ -1,23 +1,29 @@
 import { useEffect } from 'react';
-import { GetStaticPaths, GetStaticProps } from 'next';
+import { ParsedUrlQuery } from 'querystring';
+import { GetServerSideProps } from 'next';
+import { useRouter } from 'next/router';
 import NotFound from 'src/NotFound';
-import Layout from 'src/Layout';
 import {
   SitecoreContext,
   ComponentPropsContext,
   handleExperienceEditorFastRefresh,
 } from '@sitecore-jss/sitecore-jss-nextjs';
-import { StyleguideSitecoreContextValue } from 'lib/component-props';
+import Layout from 'src/Layout';
 import { SitecorePageProps } from 'lib/page-props';
-import { sitecorePagePropsFactory } from 'lib/page-props-factory';
+import { sitecorePagePropsFactory, extractPath } from 'lib/page-props-factory';
 import { componentFactory } from 'temp/componentFactory';
-import { sitemapFetcher } from 'lib/sitemap-fetcher';
+import { StyleguideSitecoreContextValue } from 'lib/component-props';
+
+import { matchPath } from 'lib/router';
 
 const SitecorePage = ({ notFound, layoutData, componentProps }: SitecorePageProps): JSX.Element => {
   useEffect(() => {
     // Since Experience Editor does not support Fast Refresh need to refresh EE chromes after Fast Refresh finished
     handleExperienceEditorFastRefresh();
   }, []);
+
+  const router = useRouter();
+  console.log('router: ', router);
 
   if (notFound || !layoutData) {
     // Shouldn't hit this (as long as 'notFound' is being returned below), but just to be safe
@@ -42,46 +48,41 @@ const SitecorePage = ({ notFound, layoutData, componentProps }: SitecorePageProp
   );
 };
 
-// This function gets called at build and export time to determine
-// pages for SSG ("paths", as tokenized array).
-export const getStaticPaths: GetStaticPaths = async (context) => {
-  // Fallback, along with revalidate in getStaticProps (below),
-  // enables Incremental Static Regeneration. This allows us to
-  // leave certain (or all) paths empty if desired and static pages
-  // will be generated on request (development mode in this example).
-  // Alternatively, the entire sitemap could be pre-rendered
-  // ahead of time (non-development mode in this example).
-  // See https://nextjs.org/docs/basic-features/data-fetching#incremental-static-regeneration
+type Rewrite = { path: string; to: string[] | string };
 
-  if (process.env.NODE_ENV !== 'development') {
-    // Note: Next.js runs export in production mode
-    const paths = await sitemapFetcher.fetch(context);
+const rewrites: Rewrite[] = [{ path: '/blog/:blogId', to: ['styleguide'] }];
 
-    return {
-      paths,
-      fallback: process.env.EXPORT_MODE ? false : 'blocking',
-    };
+const matchRewtites = (url: string): ParsedUrlQuery | null => {
+  for (const rewrite of rewrites) {
+    const match = matchPath(rewrite.path, url);
+    // Path param is in return objrct response of getting data from Layout Service
+    // See page-props-factory.ts `extractPath`
+    if (match) return { ...match.params, path: rewrite.to };
   }
 
-  return {
-    paths: [],
-    fallback: 'blocking',
-  };
+  return null;
 };
 
-// This function gets called at build time on server-side.
-// It may be called again, on a serverless function, if
-// revalidation (or fallback) is enabled and a new request comes in.
-export const getStaticProps: GetStaticProps = async (context) => {
-  const props = await sitecorePagePropsFactory.create(context);
+// This function gets called at request time on server-side.
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  // const { resolvedUrl } = context;
+  // const match = matchPath('/:foo/:bar', resolvedUrl);
+  const path = extractPath(context.params);
+  const matchedParams = matchRewtites(path);
+  const newContext = {
+    ...context,
+    params: { ...context.params, ...matchedParams },
+  };
+  console.log('context.params:', context.params);
+  const props = await sitecorePagePropsFactory.create(newContext);
+
+  // Returns custom 404 page with a status code of 404 when notFound: true
+  // Note we can't simply return props.notFound due to an issue in Next.js (https://github.com/vercel/next.js/issues/22472)
+  const notFound = props.notFound ? { notFound: true } : {};
 
   return {
     props,
-    // Next.js will attempt to re-generate the page:
-    // - When a request comes in
-    // - At most once every 5 seconds
-    revalidate: 5, // In seconds
-    notFound: props.notFound, // Returns custom 404 page with a status code of 404 when true
+    ...notFound,
   };
 };
 
